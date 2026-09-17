@@ -4,14 +4,21 @@ import 'package:portfolio_app/routes/app_routes.dart';
 import 'package:portfolio_app/screens/activity_one_screen.dart';
 import 'package:portfolio_app/screens/activity_two_screen.dart';
 import 'package:portfolio_app/screens/home_screen.dart';
+import 'package:portfolio_app/screens/network_monitor_screen.dart';
 import 'package:portfolio_app/screens/settings_screen.dart';
 import 'package:portfolio_app/state/app_settings.dart';
+import 'package:portfolio_app/state/network_monitor_service.dart';
 import 'package:portfolio_app/theme/app_theme.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppSettings(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppSettings()),
+        ChangeNotifierProvider(
+          create: (_) => NetworkMonitorService()..initialize(),
+        ),
+      ],
       child: const PortfolioApp(),
     ),
   );
@@ -35,6 +42,7 @@ class PortfolioApp extends StatelessWidget {
         AppRoutes.home: (_) => const HomeScreen(),
         AppRoutes.activityOne: (_) => const ActivityOneScreen(),
         AppRoutes.activityTwo: (_) => const ActivityTwoScreen(),
+        AppRoutes.networkMonitor: (_) => const NetworkMonitorScreen(),
         AppRoutes.settings: (_) => const SettingsScreen(),
       },
     );

@@ -3,11 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:portfolio_app/main.dart';
 import 'package:portfolio_app/state/app_settings.dart';
+import 'package:portfolio_app/state/network_monitor_service.dart';
 
 Future<void> pumpApp(WidgetTester tester) {
   return tester.pumpWidget(
-    ChangeNotifierProvider(
-      create: (_) => AppSettings(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppSettings()),
+        ChangeNotifierProvider(
+          create: (_) => NetworkMonitorService()..initialize(),
+        ),
+      ],
       child: const PortfolioApp(),
     ),
   );
@@ -41,10 +47,13 @@ void main() {
   testWidgets('home remains usable on narrow and wide viewports', (
     tester,
   ) async {
-    addTearDown(() => tester.view.resetPhysicalSize());
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
 
     for (final size in <Size>[const Size(360, 640), const Size(1200, 800)]) {
-      debugPrint('VIEW $size DPR ${tester.view.devicePixelRatio}');
+      tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = size;
       await tester.pump();
       await pumpApp(tester);
@@ -55,6 +64,22 @@ void main() {
       expect(find.text('Counter Lab'), findsOneWidget);
     }
   });
+
+  testWidgets(
+    'network monitor route displays connectivity and queue controls',
+    (tester) async {
+      await pumpApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Network Monitor'), 300);
+      await tester.tap(find.text('Network Monitor'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Live connectivity'), findsOneWidget);
+      expect(find.text('Detected interfaces'), findsOneWidget);
+      expect(find.text('Simulated request queue'), findsOneWidget);
+      expect(find.text('Start large dataset sync'), findsOneWidget);
+    },
+  );
 
   testWidgets('settings updates global profile and theme on home', (
     tester,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:portfolio_app/routes/app_routes.dart';
 import 'package:portfolio_app/state/app_settings.dart';
+import 'package:portfolio_app/state/network_models.dart';
+import 'package:portfolio_app/state/network_monitor_service.dart';
 import 'package:portfolio_app/widgets/activity_card.dart';
 import 'package:portfolio_app/widgets/section_heading.dart';
 import 'package:portfolio_app/widgets/stat_card.dart';
@@ -12,6 +14,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<AppSettings>(context);
+    final networkMonitor = Provider.of<NetworkMonitorService>(context);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -50,6 +53,8 @@ class HomeScreen extends StatelessWidget {
                         colorScheme: colorScheme,
                         profileName: settings.profileName,
                         availableWidth: contentWidth,
+                        networkStatus: networkMonitor.status,
+                        interfaceSummary: networkMonitor.interfaceSummary,
                       ),
                       const SizedBox(height: 28),
                       const SectionHeading(
@@ -99,48 +104,44 @@ class _DashboardPanels extends StatelessWidget {
     required this.colorScheme,
     required this.profileName,
     required this.availableWidth,
+    required this.networkStatus,
+    required this.interfaceSummary,
   });
 
   final ColorScheme colorScheme;
   final String profileName;
   final double availableWidth;
+  final NetworkStatus networkStatus;
+  final String interfaceSummary;
 
   @override
   Widget build(BuildContext context) {
     final summaryWidth = (availableWidth - 16) * 2 / 3;
     final progressWidth = (availableWidth - 16) / 3;
 
+    Widget summaryCard() {
+      return _SummaryCard(
+        colorScheme: colorScheme,
+        profileName: profileName,
+        networkStatus: networkStatus,
+        interfaceSummary: interfaceSummary,
+      );
+    }
+
     if (availableWidth >= 760) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: summaryWidth,
-            height: 240,
-            child: _SummaryCard(
-              colorScheme: colorScheme,
-              profileName: profileName,
-            ),
-          ),
+          SizedBox(width: summaryWidth, child: summaryCard()),
           const SizedBox(width: 16),
-          SizedBox(
-            width: progressWidth,
-            height: 320,
-            child: const _ProgressCard(),
-          ),
+          SizedBox(width: progressWidth, child: const _ProgressCard()),
         ],
       );
     }
 
     return Column(
       children: [
-        SizedBox(
-          width: availableWidth,
-          child: _SummaryCard(
-            colorScheme: colorScheme,
-            profileName: profileName,
-          ),
-        ),
+        SizedBox(width: availableWidth, child: summaryCard()),
         const SizedBox(height: 16),
         SizedBox(width: availableWidth, child: const _ProgressCard()),
       ],
@@ -156,62 +157,66 @@ class _ActivityPanels extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardWidth = (availableWidth - 16) / 2;
+    final cards = <Widget>[
+      ActivityCard(
+        icon: Icons.touch_app_outlined,
+        title: 'Counter Lab',
+        description:
+            'Practice StatefulWidget interactions and responsive controls.',
+        onTap: () => Navigator.of(context).pushNamed(AppRoutes.activityOne),
+      ),
+      ActivityCard(
+        icon: Icons.grid_view_outlined,
+        title: 'Layout Explorer',
+        description:
+            'Compare responsive card layouts and local selection state.',
+        onTap: () => Navigator.of(context).pushNamed(AppRoutes.activityTwo),
+      ),
+      ActivityCard(
+        icon: Icons.wifi_find_outlined,
+        title: 'Network Monitor',
+        description:
+            'Watch live connectivity and recover queued work automatically.',
+        onTap: () => Navigator.of(context).pushNamed(AppRoutes.networkMonitor),
+      ),
+    ];
 
-    if (availableWidth >= 680) {
+    if (availableWidth >= 900) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            width: cardWidth,
-            child: ActivityCard(
-              icon: Icons.touch_app_outlined,
-              title: 'Counter Lab',
-              description:
-                  'Practice StatefulWidget interactions and responsive controls.',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.activityOne),
-            ),
+          for (final card in cards) ...[
+            Expanded(child: card),
+            if (card != cards.last) const SizedBox(width: 16),
+          ],
+        ],
+      );
+    }
+
+    if (availableWidth >= 680) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: cards[0]),
+              const SizedBox(width: 16),
+              Expanded(child: cards[1]),
+            ],
           ),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: cardWidth,
-            child: ActivityCard(
-              icon: Icons.grid_view_outlined,
-              title: 'Layout Explorer',
-              description:
-                  'Compare responsive card layouts and local selection state.',
-              onTap: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.activityTwo),
-            ),
-          ),
+          const SizedBox(height: 16),
+          cards[2],
         ],
       );
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: availableWidth,
-          child: ActivityCard(
-            icon: Icons.touch_app_outlined,
-            title: 'Counter Lab',
-            description:
-                'Practice StatefulWidget interactions and responsive controls.',
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.activityOne),
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: availableWidth,
-          child: ActivityCard(
-            icon: Icons.grid_view_outlined,
-            title: 'Layout Explorer',
-            description:
-                'Compare responsive card layouts and local selection state.',
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.activityTwo),
-          ),
-        ),
+        for (var index = 0; index < cards.length; index += 1) ...[
+          cards[index],
+          if (index < cards.length - 1) const SizedBox(height: 16),
+        ],
       ],
     );
   }
@@ -258,10 +263,17 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.colorScheme, required this.profileName});
+  const _SummaryCard({
+    required this.colorScheme,
+    required this.profileName,
+    required this.networkStatus,
+    required this.interfaceSummary,
+  });
 
   final ColorScheme colorScheme;
   final String profileName;
+  final NetworkStatus networkStatus;
+  final String interfaceSummary;
 
   @override
   Widget build(BuildContext context) {
@@ -303,12 +315,36 @@ class _SummaryCard extends StatelessWidget {
                   label: const Text('Theme connected'),
                   backgroundColor: colorScheme.primaryContainer,
                 ),
+                InputChip(
+                  avatar: Icon(
+                    _networkIcon(networkStatus),
+                    size: 18,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                  label: Text('Network: ${networkStatus.label}'),
+                  backgroundColor: colorScheme.primaryContainer,
+                ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Active interfaces: $interfaceSummary',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
       ),
     );
+  }
+
+  IconData _networkIcon(NetworkStatus status) {
+    return switch (status) {
+      NetworkStatus.wifi => Icons.wifi,
+      NetworkStatus.cellular => Icons.signal_cellular_alt,
+      NetworkStatus.offline => Icons.wifi_off_outlined,
+      NetworkStatus.other => Icons.dns_outlined,
+      NetworkStatus.unknown => Icons.sync_outlined,
+    };
   }
 }
 
@@ -337,7 +373,7 @@ class _ProgressCard extends StatelessWidget {
             const StatCard(
               icon: Icons.science_outlined,
               label: 'Activities',
-              value: '2',
+              value: '3',
             ),
             const SizedBox(height: 12),
             const StatCard(
